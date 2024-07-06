@@ -106,6 +106,9 @@ inputs:
   long-paths:
     description: Enable core.longpath support
     default: true
+  gc-first:
+    description: Garbage collect repository before fetch
+    default: false
 
 output:
   ref:

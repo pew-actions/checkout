@@ -59,6 +59,7 @@ export interface IGitCommandManager {
   tryDisableAutomaticGarbageCollection(): Promise<boolean>
   tryGetFetchUrl(): Promise<string>
   tryReset(): Promise<boolean>
+  garbageCollect(): Promise<void>
 }
 
 export async function createCommandManager(
@@ -336,6 +337,12 @@ class GitCommandManager {
     await retryHelper.execute(async () => {
       await that.execGit(args)
     })
+  }
+
+  async garbageCollect(): Promise<void> {
+    const args = ['gc', '--aggressive', "--quiet", "--prune"]
+
+    await this.execGit(args)
   }
 
   async lfsInstall(): Promise<void> {
