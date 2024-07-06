@@ -138,6 +138,10 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # Enable core.longpath support
     # Default: true
     long-paths: ''
+
+    # Garbage collect repository before fetch
+    # Default: false
+    gc-first: ''
 ```
 <!-- end usage -->
 

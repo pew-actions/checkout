@@ -63,6 +63,13 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
 
     // Prepare existing directory, otherwise recreate
     if (isExisting) {
+      // Garbage collect
+      if (settings.gcFirst && git) {
+        core.startGroup("Garbage collecting repository")
+        await git.garbageCollect();
+        core.endGroup()
+      }
+
       await gitDirectoryHelper.prepareExistingDirectory(
         git,
         settings.repositoryPath,

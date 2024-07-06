@@ -120,6 +120,9 @@ export async function getInputs(): Promise<IGitSourceSettings> {
     (core.getInput('show-progress') || 'true').toUpperCase() === 'TRUE'
   core.debug(`show progress = ${result.showProgress}`)
 
+  // Garbage collection
+  result.gcFirst = (core.getInput('gc-first') || 'false').toUpperCase() === 'TRUE'
+
   // LFS
   result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE'
   result.lfsurl = (core.getInput('lfs-url') || '')

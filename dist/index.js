@@ -714,6 +714,12 @@ class GitCommandManager {
             }));
         });
     }
+    garbageCollect() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const args = ['gc', '--aggressive', "--quiet", "--prune"];
+            yield this.execGit(args);
+        });
+    }
     lfsInstall() {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.execGit(['lfs', 'install', '--local']);
@@ -1194,6 +1200,12 @@ function getSource(settings) {
             }
             // Prepare existing directory, otherwise recreate
             if (isExisting) {
+                // Garbage collect
+                if (settings.gcFirst && git) {
+                    core.startGroup("Garbage collecting repository");
+                    yield git.garbageCollect();
+                    core.endGroup();
+                }
                 yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean, settings.cleanExclude, settings.ref);
             }
             if (!git) {
@@ -1806,6 +1818,8 @@ function getInputs() {
         result.showProgress =
             (core.getInput('show-progress') || 'true').toUpperCase() === 'TRUE';
         core.debug(`show progress = ${result.showProgress}`);
+        // Garbage collection
+        result.gcFirst = (core.getInput('gc-first') || 'false').toUpperCase() === 'TRUE';
         // LFS
         result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE';
         result.lfsurl = (core.getInput('lfs-url') || '');

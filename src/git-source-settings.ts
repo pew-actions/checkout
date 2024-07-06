@@ -75,6 +75,11 @@ export interface IGitSourceSettings {
   lfsurl: string
 
   /**
+   * Garbage collect the repository first
+   */
+   gcFirst: boolean
+
+  /**
    * The credential provider to usse for the Git LFS server
    */
   lfsCredProvider: string
