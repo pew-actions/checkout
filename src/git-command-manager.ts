@@ -340,7 +340,7 @@ class GitCommandManager {
   }
 
   async garbageCollect(): Promise<void> {
-    const args = ['gc', '--aggressive', "--quiet", "--prune"]
+    const args = ['gc', "--quiet", "--prune"]
 
     await this.execGit(args)
   }
