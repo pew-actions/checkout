@@ -115,6 +115,11 @@ export interface IGitSourceSettings {
   sshStrict: boolean
 
   /**
+   * The SSH user to login as
+   */
+  sshUser: string
+
+  /**
    * Indicates whether to persist the credentials on disk to enable scripting authenticated git commands
    */
   persistCredentials: boolean
