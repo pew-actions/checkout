@@ -71,6 +71,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
         core.startGroup("Garbage collecting repository")
         await git.config('gc.auto', '6700', false, true)
         await git.garbageCollect(true);
+        await git.tryConfigUnset('gc.auto', false)
         core.endGroup()
       }
 
