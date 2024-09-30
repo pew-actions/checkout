@@ -1238,6 +1238,7 @@ function getSource(settings) {
                     core.startGroup("Garbage collecting repository");
                     yield git.config('gc.auto', '6700', false, true);
                     yield git.garbageCollect(true);
+                    yield git.tryConfigUnset('gc.auto', false);
                     core.endGroup();
                 }
                 yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean, settings.cleanExclude, settings.ref);
