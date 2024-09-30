@@ -113,11 +113,11 @@ inputs:
   gc-first:
     description: Garbage collect repository before fetch
     default: false
-
-output:
+outputs:
   ref:
-    description: The SHA1 ref that was checked out
-
+    description: 'The branch, tag or SHA that was checked out'
+  commit:
+    description: 'The commit SHA that was checked out'
 runs:
   using: node20
   main: dist/index.js
