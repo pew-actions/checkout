@@ -63,7 +63,7 @@ export interface IGitCommandManager {
   tryGetFetchUrl(): Promise<string>
   tryReset(): Promise<boolean>
   version(): Promise<GitVersion>
-  garbageCollect(): Promise<void>
+  garbageCollect(automatic: boolean): Promise<void>
 }
 
 export async function createCommandManager(
@@ -350,8 +350,11 @@ class GitCommandManager {
     })
   }
 
-  async garbageCollect(): Promise<void> {
+  async garbageCollect(automatic: boolean): Promise<void> {
     const args = ['gc', "--quiet", "--prune"]
+    if (automatic) {
+      args.push("--auto")
+    }
 
     await this.execGit(args)
   }
