@@ -732,9 +732,12 @@ class GitCommandManager {
             }));
         });
     }
-    garbageCollect() {
+    garbageCollect(automatic) {
         return __awaiter(this, void 0, void 0, function* () {
             const args = ['gc', "--quiet", "--prune"];
+            if (automatic) {
+                args.push("--auto");
+            }
             yield this.execGit(args);
         });
     }
@@ -1233,7 +1236,8 @@ function getSource(settings) {
                 // Garbage collect
                 if (settings.gcFirst && git) {
                     core.startGroup("Garbage collecting repository");
-                    yield git.garbageCollect();
+                    yield git.config('gc.auto', '6700', false, true);
+                    yield git.garbageCollect(true);
                     core.endGroup();
                 }
                 yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean, settings.cleanExclude, settings.ref);
