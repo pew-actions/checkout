@@ -1,5 +1,10 @@
 export interface IGitSourceSettings {
   /**
+   * The source control provider
+   */
+  provider: string
+
+  /**
    * The location on disk where the repository will be placed
    */
   repositoryPath: string

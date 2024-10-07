@@ -54,8 +54,9 @@ class GitAuthHelper {
     // Token auth header
     const serverUrl = urlHelper.getServerUrl(this.settings.githubServerUrl)
     this.tokenConfigKey = `http.${serverUrl.origin}/.extraheader` // "origin" is SCHEME://HOSTNAME[:PORT]
+	const username = this.settings.provider === 'bitbucket' ? '' : 'x-access-token:'
     const basicCredential = Buffer.from(
-      `x-access-token:${this.settings.authToken}`,
+      `${username}${this.settings.authToken}`,
       'utf8'
     ).toString('base64')
     core.setSecret(basicCredential)
