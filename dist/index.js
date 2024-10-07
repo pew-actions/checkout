@@ -167,7 +167,8 @@ class GitAuthHelper {
         // Token auth header
         const serverUrl = urlHelper.getServerUrl(this.settings.githubServerUrl);
         this.tokenConfigKey = `http.${serverUrl.origin}/.extraheader`; // "origin" is SCHEME://HOSTNAME[:PORT]
-        const basicCredential = Buffer.from(`x-access-token:${this.settings.authToken}`, 'utf8').toString('base64');
+        const username = this.settings.provider === 'bitbucket' ? '' : 'x-access-token:';
+        const basicCredential = Buffer.from(`${username}${this.settings.authToken}`, 'utf8').toString('base64');
         core.setSecret(basicCredential);
         this.tokenPlaceholderConfigValue = `AUTHORIZATION: basic ***`;
         this.tokenConfigValue = `AUTHORIZATION: basic ${basicCredential}`;
@@ -1786,11 +1787,11 @@ function getInputs() {
         githubWorkspacePath = path.resolve(githubWorkspacePath);
         core.debug(`GITHUB_WORKSPACE = '${githubWorkspacePath}'`);
         fsHelper.directoryExistsSync(githubWorkspacePath, true);
-        const provider = core.getInput('provider') || 'github';
+        result.provider = core.getInput('provider') || 'github';
         var qualifiedRepository = core.getInput('repository') ||
             `${github.context.repo.owner}/${github.context.repo.repo}`;
         var githubServerUrl = core.getInput('github-server-url');
-        if (provider === 'gitlab') {
+        if (result.provider === 'gitlab') {
             const repoUrl = new URL(qualifiedRepository);
             githubServerUrl = repoUrl.origin;
             qualifiedRepository = repoUrl.pathname.substring(1);
