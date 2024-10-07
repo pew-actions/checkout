@@ -1791,7 +1791,7 @@ function getInputs() {
         var qualifiedRepository = core.getInput('repository') ||
             `${github.context.repo.owner}/${github.context.repo.repo}`;
         var githubServerUrl = core.getInput('github-server-url');
-        if (result.provider === 'gitlab') {
+        if (result.provider === 'gitlab' || result.provider === 'bitbucket') {
             const repoUrl = new URL(qualifiedRepository);
             githubServerUrl = repoUrl.origin;
             qualifiedRepository = repoUrl.pathname.substring(1);
