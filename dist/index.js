@@ -1786,9 +1786,16 @@ function getInputs() {
         githubWorkspacePath = path.resolve(githubWorkspacePath);
         core.debug(`GITHUB_WORKSPACE = '${githubWorkspacePath}'`);
         fsHelper.directoryExistsSync(githubWorkspacePath, true);
-        // Qualified repository
-        const qualifiedRepository = core.getInput('repository') ||
+        const provider = core.getInput('provider') || 'github';
+        var qualifiedRepository = core.getInput('repository') ||
             `${github.context.repo.owner}/${github.context.repo.repo}`;
+        var githubServerUrl = core.getInput('github-server-url');
+        if (provider === 'gitlab') {
+            const repoUrl = new URL(qualifiedRepository);
+            githubServerUrl = repoUrl.origin;
+            qualifiedRepository = repoUrl.pathname.substring(1);
+        }
+        // Qualified repository
         core.debug(`qualified repository = '${qualifiedRepository}'`);
         const splitRepository = qualifiedRepository.split('/');
         if (splitRepository.length !== 2 ||
@@ -1903,7 +1910,7 @@ function getInputs() {
         result.setSafeDirectory =
             (core.getInput('set-safe-directory') || 'true').toUpperCase() === 'TRUE';
         // Determine the GitHub URL that the repository is being hosted from
-        result.githubServerUrl = core.getInput('github-server-url');
+        result.githubServerUrl = githubServerUrl;
         core.debug(`GitHub Host URL = ${result.githubServerUrl}`);
         // config
         result.longpaths = core.getInput('long-paths').toUpperCase() == 'TRUE';

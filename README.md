@@ -25,6 +25,10 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # Default: ${{ github.repository }}
     repository: ''
 
+    # Source control provider
+    # Default: github
+    provider: ''
+
     # The branch, tag or SHA to checkout. When checking out the repository that
     # triggered a workflow, this defaults to the reference or SHA for that event.
     # Otherwise, uses the default branch.
