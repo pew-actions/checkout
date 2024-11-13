@@ -4,8 +4,9 @@ import * as github from '@actions/github'
 import * as path from 'path'
 import * as workflowContextHelper from './workflow-context-helper'
 import {IGitSourceSettings} from './git-source-settings'
+import {IPerforceSourceSettings} from './p4-source-settings'
 
-export async function getInputs(): Promise<IGitSourceSettings> {
+export async function getInputs(): Promise<IGitSourceSettings | IPerforceSourceSettings> {
   const result = {} as unknown as IGitSourceSettings
 
   // GitHub workspace
@@ -30,20 +31,25 @@ export async function getInputs(): Promise<IGitSourceSettings> {
     qualifiedRepository = repoUrl.pathname.substring(1)
   }
 
-  // Qualified repository
-  core.debug(`qualified repository = '${qualifiedRepository}'`)
-  const splitRepository = qualifiedRepository.split('/')
-  if (
-    splitRepository.length !== 2 ||
-    !splitRepository[0] ||
-    !splitRepository[1]
-  ) {
-    throw new Error(
-      `Invalid repository '${qualifiedRepository}'. Expected format {owner}/{repo}.`
-    )
+  if (result.provider === 'perforce') {
+    result.repositoryOwner = 'p4'
+    result.repositoryName = qualifiedRepository
+  } else {
+    // Qualified repository
+    core.debug(`qualified repository = '${qualifiedRepository}'`)
+    const splitRepository = qualifiedRepository.split('/')
+    if (
+      splitRepository.length !== 2 ||
+      !splitRepository[0] ||
+      !splitRepository[1]
+    ) {
+      throw new Error(
+        `Invalid repository '${qualifiedRepository}'. Expected format {owner}/{repo}.`
+      )
+    }
+    result.repositoryOwner = splitRepository[0]
+    result.repositoryName = splitRepository[1]
   }
-  result.repositoryOwner = splitRepository[0]
-  result.repositoryName = splitRepository[1]
 
   // Repository path
   result.repositoryPath = core.getInput('path') || '.'
@@ -185,6 +191,19 @@ export async function getInputs(): Promise<IGitSourceSettings> {
 
   // config
   result.longpaths = core.getInput('long-paths').toUpperCase() == 'TRUE'
+
+  // perforce settings
+  if (result.provider === 'perforce') {
+    const p4Result = result as unknown as IPerforceSourceSettings
+
+    const template = process.env.P4_CLIENT_TEMPLATE
+    if (!template) {
+      throw new Error('No `P4_CLIENT_TEMPLATE` specified')
+    }
+    p4Result.clientTemplate = template
+
+    p4Result.useClientTemplate = (process.env.P4_USE_TEMPLATE_CLIENT === 'true')
+  }
 
   return result
 }

@@ -1,9 +1,12 @@
 import * as core from '@actions/core'
 import * as coreCommand from '@actions/core/lib/command'
 import * as gitSourceProvider from './git-source-provider'
+import * as p4SourceProvider from './p4-source-provider'
 import * as inputHelper from './input-helper'
 import * as path from 'path'
 import * as stateHelper from './state-helper'
+
+import {IPerforceSourceSettings} from './p4-source-settings'
 
 async function run(): Promise<void> {
   try {
@@ -18,7 +21,11 @@ async function run(): Promise<void> {
       )
 
       // Get sources
-      await gitSourceProvider.getSource(sourceSettings)
+      if (sourceSettings.provider === 'perforce') {
+        await p4SourceProvider.getSource(sourceSettings as IPerforceSourceSettings)
+      } else {
+        await gitSourceProvider.getSource(sourceSettings)
+      }
       core.setOutput('ref', sourceSettings.ref)
     } finally {
       // Unregister problem matcher
