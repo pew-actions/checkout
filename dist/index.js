@@ -1797,16 +1797,22 @@ function getInputs() {
             githubServerUrl = repoUrl.origin;
             qualifiedRepository = repoUrl.pathname.substring(1);
         }
-        // Qualified repository
-        core.debug(`qualified repository = '${qualifiedRepository}'`);
-        const splitRepository = qualifiedRepository.split('/');
-        if (splitRepository.length !== 2 ||
-            !splitRepository[0] ||
-            !splitRepository[1]) {
-            throw new Error(`Invalid repository '${qualifiedRepository}'. Expected format {owner}/{repo}.`);
+        if (result.provider === 'perforce') {
+            result.repositoryOwner = 'p4';
+            result.repositoryName = qualifiedRepository;
         }
-        result.repositoryOwner = splitRepository[0];
-        result.repositoryName = splitRepository[1];
+        else {
+            // Qualified repository
+            core.debug(`qualified repository = '${qualifiedRepository}'`);
+            const splitRepository = qualifiedRepository.split('/');
+            if (splitRepository.length !== 2 ||
+                !splitRepository[0] ||
+                !splitRepository[1]) {
+                throw new Error(`Invalid repository '${qualifiedRepository}'. Expected format {owner}/{repo}.`);
+            }
+            result.repositoryOwner = splitRepository[0];
+            result.repositoryName = splitRepository[1];
+        }
         // Repository path
         result.repositoryPath = core.getInput('path') || '.';
         result.repositoryPath = path.resolve(githubWorkspacePath, result.repositoryPath);
@@ -1916,6 +1922,16 @@ function getInputs() {
         core.debug(`GitHub Host URL = ${result.githubServerUrl}`);
         // config
         result.longpaths = core.getInput('long-paths').toUpperCase() == 'TRUE';
+        // perforce settings
+        if (result.provider === 'perforce') {
+            const p4Result = result;
+            const template = process.env.P4_CLIENT_TEMPLATE;
+            if (!template) {
+                throw new Error('No `P4_CLIENT_TEMPLATE` specified');
+            }
+            p4Result.clientTemplate = template;
+            p4Result.useClientTemplate = (process.env.P4_USE_TEMPLATE_CLIENT === 'true');
+        }
         return result;
     });
 }
@@ -1964,6 +1980,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const coreCommand = __importStar(__nccwpck_require__(7351));
 const gitSourceProvider = __importStar(__nccwpck_require__(9210));
+const p4SourceProvider = __importStar(__nccwpck_require__(4758));
 const inputHelper = __importStar(__nccwpck_require__(5480));
 const path = __importStar(__nccwpck_require__(1017));
 const stateHelper = __importStar(__nccwpck_require__(4866));
@@ -1976,7 +1993,12 @@ function run() {
                 // Register problem matcher
                 coreCommand.issueCommand('add-matcher', {}, path.join(__dirname, 'problem-matcher.json'));
                 // Get sources
-                yield gitSourceProvider.getSource(sourceSettings);
+                if (sourceSettings.provider === 'perforce') {
+                    yield p4SourceProvider.getSource(sourceSettings);
+                }
+                else {
+                    yield gitSourceProvider.getSource(sourceSettings);
+                }
                 core.setOutput('ref', sourceSettings.ref);
             }
             finally {
@@ -2008,6 +2030,449 @@ if (!stateHelper.IsPost) {
 else {
     cleanup();
 }
+
+
+/***/ }),
+
+/***/ 283:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createCommandManager = createCommandManager;
+const core = __importStar(__nccwpck_require__(2186));
+const exec = __importStar(__nccwpck_require__(1514));
+const fshelper = __importStar(__nccwpck_require__(7219));
+const p4_version_1 = __nccwpck_require__(6709);
+function createCommandManager(workingDirectory) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return yield PerforceCommandManager.createCommandManager(workingDirectory);
+    });
+}
+class PerforceCommandManager {
+    static createCommandManager(workingDirectory) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const result = new PerforceCommandManager();
+            yield result.initializeCommandManager(workingDirectory);
+            return result;
+        });
+    }
+    // private constructor; use createCommandManager
+    constructor() {
+        this.p4Env = {};
+        this.workingDirectory = '';
+        this.perforceVersion = new p4_version_1.PerforceVersion();
+    }
+    initializeCommandManager(workingDirectory) {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.workingDirectory = workingDirectory;
+            // P4 version
+            core.debug('Getting p4 version');
+            let p4Output = yield this.execP4(['-V']);
+            const match = p4Output.stdout.match(/Rev. P4\/\w+\/(\d+\.\d+)\/\d+ /);
+            if (match) {
+                this.perforceVersion = new p4_version_1.PerforceVersion(match[1]);
+            }
+            if (!this.perforceVersion.isValid()) {
+                throw new Error('Unable to determine p4 version');
+            }
+        });
+    }
+    verifyLogin() {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.execP4(['login', '-s']);
+        });
+    }
+    client(name) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const output = yield this.execP4(['-Mj', '-Ztag', 'client', '-o', name]);
+            const client = JSON.parse(output.stdout);
+            const mappings = [];
+            for (const key of Object.keys(client)) {
+                if (key.startsWith('View')) {
+                    const view = client[key];
+                    const parts = view.split(' ');
+                    if (parts.length !== 2) {
+                        throw new Error(`Invalid client view '${view}'`);
+                    }
+                    mappings.push({
+                        depot: parts[0],
+                        client: parts[1],
+                    });
+                }
+            }
+            return {
+                host: client.Host,
+                client: client.Client,
+                description: client.Description,
+                options: client.Options,
+                submitOptions: client.SubmitOptions,
+                lineEnd: client.LineEnd,
+                owner: client.Owner,
+                root: client.Root,
+                view: mappings,
+            };
+        });
+    }
+    editClient(client) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const spec = [];
+            spec.push(`Client:\t${client.client}`);
+            spec.push(`Owner:\t${client.owner}`);
+            spec.push(`Host:\t${client.host}`);
+            spec.push('Description:');
+            for (const line of client.description.split('\n')) {
+                spec.push(`\t${line}`);
+            }
+            spec.push(`Root:\t${client.root}`);
+            spec.push(`Options:\t${client.options}`);
+            spec.push(`SubmitOptions:\t${client.submitOptions}`);
+            spec.push(`LineEnd:\t${client.lineEnd}`);
+            spec.push('View:');
+            for (const mapping of client.view) {
+                spec.push(`\t${mapping.depot} ${mapping.client}`);
+            }
+            console.log(spec.join('\n'));
+            yield this.execP4(['client', '-i'], spec.join('\n'));
+        });
+    }
+    clientExists(name) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const output = yield this.execP4(['clients', '-e', name]);
+            if (output.stdout) {
+                return true;
+            }
+            return false;
+        });
+    }
+    sync(spec) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.execP4(['sync', spec]);
+        });
+    }
+    syncK(spec) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.execP4(['sync', '-k', spec]);
+        });
+    }
+    revert(spec) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.execP4(['clean', '-a', '-d', '-e', spec]);
+        });
+    }
+    getWorkingDirectory() {
+        return this.workingDirectory;
+    }
+    setEnvironmentVariable(name, value) {
+        this.p4Env[name] = value;
+    }
+    version() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.perforceVersion;
+        });
+    }
+    execP4(args_1) {
+        return __awaiter(this, arguments, void 0, function* (args, input = '', allowAllExitCodes = false, silent = false, customListeners = {}) {
+            fshelper.directoryExistsSync(this.workingDirectory, true);
+            const result = new PerforceOutput();
+            const env = {};
+            for (const key of Object.keys(process.env)) {
+                env[key] = process.env[key];
+            }
+            for (const key of Object.keys(this.p4Env)) {
+                env[key] = this.p4Env[key];
+            }
+            const defaultListener = {
+                stdout: (data) => {
+                    stdout.push(data.toString());
+                }
+            };
+            const mergedListeners = Object.assign(Object.assign({}, defaultListener), customListeners);
+            const stdout = [];
+            const options = {
+                cwd: this.workingDirectory,
+                env,
+                silent,
+                ignoreReturnCode: allowAllExitCodes,
+                listeners: mergedListeners,
+                input: input ? Buffer.from(input) : undefined,
+            };
+            result.exitCode = yield exec.exec('p4.exe', args, options);
+            result.stdout = stdout.join('');
+            core.debug(result.exitCode.toString());
+            core.debug(result.stdout);
+            return result;
+        });
+    }
+}
+class PerforceOutput {
+    constructor() {
+        this.stdout = '';
+        this.exitCode = 0;
+    }
+}
+
+
+/***/ }),
+
+/***/ 4758:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getSource = getSource;
+const core = __importStar(__nccwpck_require__(2186));
+const fsHelper = __importStar(__nccwpck_require__(7219));
+const io = __importStar(__nccwpck_require__(7436));
+const os = __importStar(__nccwpck_require__(2037));
+const perforceCommandManager = __importStar(__nccwpck_require__(283));
+function getSource(settings) {
+    return __awaiter(this, void 0, void 0, function* () {
+        core.info(`Syncing repository: ${settings.repositoryName}`);
+        // remove conflicting file path (file not directory)
+        if (fsHelper.fileExistsSync(settings.repositoryPath)) {
+            yield io.rmRF(settings.repositoryPath);
+        }
+        // create directory
+        if (!fsHelper.directoryExistsSync(settings.repositoryPath)) {
+            yield io.mkdirP(settings.repositoryPath);
+        }
+        // Perforce command manager
+        core.startGroup('Getting Perforce version info');
+        const p4 = yield getPerforceCommandManager(settings);
+        console.log(`P4 version ${yield p4.version()}`);
+        core.endGroup();
+        const p4User = settings.authToken;
+        p4.setEnvironmentVariable('P4PORT', settings.repositoryName);
+        p4.setEnvironmentVariable('P4USER', p4User);
+        core.startGroup('Login to server');
+        try {
+            yield p4.verifyLogin();
+        }
+        catch (_a) {
+            throw 'Workflow must login to perforce before running checkout';
+        }
+        core.endGroup();
+        core.startGroup('Get template workspace');
+        const clientTemplate = yield p4.client(settings.clientTemplate);
+        core.endGroup();
+        core.startGroup('Setting up client workspace');
+        const clientName = settings.useClientTemplate ? settings.clientTemplate : `${settings.clientTemplate}_${os.hostname().replace('-', '_')}`;
+        let needSyncNone = false;
+        if (yield p4.clientExists(clientName)) {
+            const existingClient = yield p4.client(clientName);
+            if (existingClient.owner && existingClient.owner !== p4User) {
+                throw new Error(`Client owner does not match, aborting. ${existingClient.owner} != ${p4User}`);
+            }
+            let rebuildClient = false;
+            // check the mappings match
+            const templateMappings = new Map();
+            for (const mapping of clientTemplate.view) {
+                templateMappings.set(mapping.depot, mapping.client.replace(`//${settings.clientTemplate}/`, `//${clientName}/`));
+            }
+            for (const mapping of existingClient.view) {
+                if (!templateMappings.has(mapping.depot)) {
+                    rebuildClient = true;
+                    core.warning(`Client has extra mapping: ${mapping.depot} ${mapping.client}`);
+                }
+                else if (templateMappings.get(mapping.depot) !== mapping.client) {
+                    rebuildClient = true;
+                    core.warning(`Client has extra mapping: ${mapping.depot} ${mapping.client}`);
+                }
+                templateMappings.delete(mapping.depot);
+            }
+            for (const mapping of templateMappings) {
+                rebuildClient = true;
+                core.warning(`Client is missing mapping: ${mapping[0]} ${mapping[1]}`);
+            }
+            // ensure the host matches
+            if (existingClient.host !== os.hostname()) {
+                rebuildClient = true;
+                core.warning(`Client has mismatched host: ${existingClient.host} != ${os.hostname()}`);
+            }
+            // ensure root matches
+            if (existingClient.root !== settings.repositoryPath) {
+                rebuildClient = true;
+                core.warning(`Client has mismatched root: ${existingClient.root} != ${settings.repositoryPath}`);
+            }
+            if (rebuildClient) {
+                needSyncNone = true;
+                existingClient.host = os.hostname();
+                existingClient.root = settings.repositoryPath;
+                existingClient.view = [];
+                for (const mapping of clientTemplate.view) {
+                    existingClient.view.push({
+                        depot: mapping.depot,
+                        client: mapping.client.replace(`//${settings.clientTemplate}/`, `//${clientName}/`)
+                    });
+                }
+                console.log('Modifying client to match spec');
+                yield p4.editClient(existingClient);
+            }
+        }
+        else {
+            throw new Error('Creating a client is not implemented yet');
+        }
+        core.endGroup();
+        p4.setEnvironmentVariable('P4CLIENT', clientName);
+        if (needSyncNone) {
+            core.startGroup('Purging client workspace to #none');
+            core.warning('Client workspace changed. Resetting all files');
+            yield p4.syncK(`//${clientName}/...#none`);
+            // re-create the checkout directory
+            yield io.rmRF(settings.repositoryPath);
+            yield io.mkdirP(settings.repositoryPath);
+            core.endGroup();
+        }
+        core.startGroup('Restoring checkout directory');
+        yield p4.revert(`//${clientName}/...`);
+        core.endGroup();
+        core.startGroup('Checking out the ref');
+        yield p4.sync(`//${clientName}/...${settings.ref}`);
+        core.endGroup();
+        // get client workspace info
+        console.log(`Changelist ${settings.ref}`);
+        core.setOutput('commit', settings.ref);
+    });
+}
+function getPerforceCommandManager(settings) {
+    return __awaiter(this, void 0, void 0, function* () {
+        core.info(`Working directory is '${settings.repositoryPath}'`);
+        return yield perforceCommandManager.createCommandManager(settings.repositoryPath);
+    });
+}
+
+
+/***/ }),
+
+/***/ 6709:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PerforceVersion = void 0;
+class PerforceVersion {
+    /**
+     * Used for comparing the version of p4 against the minimum required version
+     * @param version the version string, e.g. 2023.3
+     */
+    constructor(version) {
+        this.major = NaN;
+        this.minor = NaN;
+        if (version) {
+            const match = version.match(/^(\d+)\.(\d+)?$/);
+            if (match) {
+                this.major = Number(match[1]);
+                this.minor = Number(match[2]);
+            }
+        }
+    }
+    /**
+     * Compares the instance against a minimum required version
+     * @param minimum Minimum version
+     */
+    checkMinimum(minimum) {
+        if (!minimum.isValid()) {
+            throw new Error('Arg minimum is not a valid version');
+        }
+        // Major is insufficient
+        if (this.major < minimum.major) {
+            return false;
+        }
+        // Major is equal
+        if (this.major === minimum.major) {
+            // Minor is insufficient
+            if (this.minor < minimum.minor) {
+                return false;
+            }
+        }
+        return true;
+    }
+    /**
+     * Indicates whether the instance was constructed from a valid version string
+     */
+    isValid() {
+        return !isNaN(this.major);
+    }
+    /**
+     * Returns the version as a string, e.g. 2023.2
+     */
+    toString() {
+        let result = '';
+        if (this.isValid()) {
+            result = `${this.major}.${this.minor}`;
+        }
+        return result;
+    }
+}
+exports.PerforceVersion = PerforceVersion;
 
 
 /***/ }),
