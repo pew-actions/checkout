@@ -1243,6 +1243,8 @@ function getSource(settings) {
                 }
                 yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean, settings.cleanExclude, settings.ref);
             }
+            stateHelper.setPostClean(settings.postClean);
+            stateHelper.setCleanExclude(settings.cleanExclude);
             if (!git) {
                 // Downloading using REST API
                 core.info(`The repository will be downloaded using the GitHub REST API`);
@@ -1437,7 +1439,7 @@ function getSource(settings) {
         }
     });
 }
-function cleanup(repositoryPath) {
+function cleanup(repositoryPath, postClean, cleanExclude) {
     return __awaiter(this, void 0, void 0, function* () {
         // Repo exists?
         if (!repositoryPath ||
@@ -1450,6 +1452,10 @@ function cleanup(repositoryPath) {
         }
         catch (_a) {
             return;
+        }
+        // clean repository
+        if (postClean) {
+            yield git.tryClean(cleanExclude);
         }
         // Remove auth
         const authHelper = gitAuthHelper.createAuthHelper(git);
@@ -1845,8 +1851,10 @@ function getInputs() {
         // Clean
         result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE';
         core.debug(`clean = ${result.clean}`);
-        result.cleanExclude = (core.getInput('clean-exclude') || '').split(',');
+        result.cleanExclude = (core.getInput('clean-exclude') || '').split('\n').filter(str => str.length > 0);
         core.debug(`cleanExclude = ${JSON.stringify(result.cleanExclude)}`);
+        result.postClean = (core.getInput('post-clean') || 'false').toUpperCase() === 'TRUE';
+        core.debug(`postClean = ${result.postClean}`);
         // Filter
         const filter = core.getInput('filter');
         if (filter) {
@@ -2015,7 +2023,7 @@ function cleanup() {
     return __awaiter(this, void 0, void 0, function* () {
         var _a;
         try {
-            yield gitSourceProvider.cleanup(stateHelper.RepositoryPath);
+            yield gitSourceProvider.cleanup(stateHelper.RepositoryPath, stateHelper.PostClean, stateHelper.CleanExclude);
         }
         catch (error) {
             core.warning(`${(_a = error === null || error === void 0 ? void 0 : error.message) !== null && _a !== void 0 ? _a : error}`);
@@ -2896,11 +2904,13 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SshKnownHostsPath = exports.SshKeyPath = exports.PostSetSafeDirectory = exports.RepositoryPath = exports.IsPost = void 0;
+exports.CleanExclude = exports.PostClean = exports.SshKnownHostsPath = exports.SshKeyPath = exports.PostSetSafeDirectory = exports.RepositoryPath = exports.IsPost = void 0;
 exports.setRepositoryPath = setRepositoryPath;
 exports.setSshKeyPath = setSshKeyPath;
 exports.setSshKnownHostsPath = setSshKnownHostsPath;
 exports.setSafeDirectory = setSafeDirectory;
+exports.setPostClean = setPostClean;
+exports.setCleanExclude = setCleanExclude;
 const core = __importStar(__nccwpck_require__(2186));
 /**
  * Indicates whether the POST action is running
@@ -2922,6 +2932,14 @@ exports.SshKeyPath = core.getState('sshKeyPath');
  * The SSH known hosts path for the POST action. The value is empty during the MAIN action.
  */
 exports.SshKnownHostsPath = core.getState('sshKnownHostsPath');
+/**
+ *  The post-clean setting for the POST action
+ */
+exports.PostClean = core.getState('postClean') === 'true';
+/**
+ * The ignored clean paths for the POST action. The value is set if input: 'clean-exclude' is set during the MAIN action.
+ */
+exports.CleanExclude = JSON.parse(core.getState('cleanExclude') || '[]');
 /**
  * Save the repository path so the POST action can retrieve the value.
  */
@@ -2945,6 +2963,18 @@ function setSshKnownHostsPath(sshKnownHostsPath) {
  */
 function setSafeDirectory() {
     core.saveState('setSafeDirectory', 'true');
+}
+/**
+ * Save the post-clean input so the POST action can retrieve the value.
+ */
+function setPostClean(postClean) {
+    core.saveState('postClean', postClean);
+}
+/**
+ * Save the clean-ignore input so the POST action can retreive the value.
+ */
+function setCleanExclude(ignored) {
+    core.saveState('cleanExclude', JSON.stringify(ignored));
 }
 // Publish a variable so that when the POST action runs, it can determine it should run the cleanup logic.
 // This is necessary since we don't have a separate entry point.

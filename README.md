@@ -83,9 +83,13 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # Default: true
     clean: ''
 
-    # Comma separated paths to exclude when executing `git clean -ffdx`
+    # Newline separated paths to exclude when executing `git clean -fdx`
     # Default: 
     clean-exclude: ''
+
+    # Clean the repostiory in the post step
+    # Default: false
+    post-clean: ''
 
     # Partially clone against a given filter. Overrides sparse-checkout if set.
     # Default: null

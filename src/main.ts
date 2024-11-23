@@ -38,7 +38,7 @@ async function run(): Promise<void> {
 
 async function cleanup(): Promise<void> {
   try {
-    await gitSourceProvider.cleanup(stateHelper.RepositoryPath)
+    await gitSourceProvider.cleanup(stateHelper.RepositoryPath, stateHelper.PostClean, stateHelper.CleanExclude)
   } catch (error) {
     core.warning(`${(error as any)?.message ?? error}`)
   }

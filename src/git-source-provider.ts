@@ -85,6 +85,9 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       )
     }
 
+    stateHelper.setPostClean(settings.postClean)
+    stateHelper.setCleanExclude(settings.cleanExclude)
+
     if (!git) {
       // Downloading using REST API
       core.info(`The repository will be downloaded using the GitHub REST API`)
@@ -349,7 +352,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
   }
 }
 
-export async function cleanup(repositoryPath: string): Promise<void> {
+export async function cleanup(repositoryPath: string, postClean: boolean, cleanExclude: string[]): Promise<void> {
   // Repo exists?
   if (
     !repositoryPath ||
@@ -367,6 +370,11 @@ export async function cleanup(repositoryPath: string): Promise<void> {
     )
   } catch {
     return
+  }
+
+  // clean repository
+  if (postClean) {
+    await git.tryClean(cleanExclude)
   }
 
   // Remove auth

@@ -61,8 +61,11 @@ inputs:
     description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
     default: true
   clean-exclude:
-    description: 'Comma separated paths to exclude when executing `git clean -ffdx`'
+    description: 'Newline separated paths to exclude when executing `git clean -fdx`'
     default: ''
+  post-clean:
+    description: 'Clean the repostiory in the post step'
+    default: false
   filter:
     description: >
       Partially clone against a given filter.

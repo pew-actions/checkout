@@ -97,8 +97,10 @@ export async function getInputs(): Promise<IGitSourceSettings | IPerforceSourceS
   // Clean
   result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE'
   core.debug(`clean = ${result.clean}`)
-  result.cleanExclude = (core.getInput('clean-exclude') || '').split(',')
+  result.cleanExclude = (core.getInput('clean-exclude') || '').split('\n').filter(str => str.length > 0)
   core.debug(`cleanExclude = ${JSON.stringify(result.cleanExclude)}`)
+  result.postClean = (core.getInput('post-clean') || 'false').toUpperCase() === 'TRUE'
+  core.debug(`postClean = ${result.postClean}`)
 
   // Filter
   const filter = core.getInput('filter')
