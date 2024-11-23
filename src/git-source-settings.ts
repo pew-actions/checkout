@@ -40,6 +40,11 @@ export interface IGitSourceSettings {
   cleanExclude: string[]
 
   /**
+   * Clean the repostiory in post step
+   */
+  postClean: boolean
+
+  /**
    * The filter determining which objects to include
    */
   filter: string | undefined
