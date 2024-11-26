@@ -401,7 +401,7 @@ export async function cleanup(repositoryPath: string, postClean: boolean, cleanE
   }
 }
 
-async function getGitCommandManager(
+export async function getGitCommandManager(
   settings: IGitSourceSettings
 ): Promise<IGitCommandManager | undefined> {
   core.info(`Working directory is '${settings.repositoryPath}'`)
