@@ -16,6 +16,12 @@ export const MinimumGitVersion = new GitVersion('2.18')
 export const MinimumGitSparseCheckoutVersion = new GitVersion('2.28')
 
 export interface IGitCommandManager {
+ execGit(
+    args: string[],
+    allowAllExitCodes,
+    silent,
+    customListeners
+  ): Promise<GitOutput>
   branchDelete(remote: boolean, branch: string): Promise<void>
   branchExists(remote: boolean, pattern: string): Promise<boolean>
   branchList(remote: boolean): Promise<string[]>
@@ -520,7 +526,7 @@ class GitCommandManager {
     return result
   }
 
-  private async execGit(
+  async execGit(
     args: string[],
     allowAllExitCodes = false,
     silent = false,
