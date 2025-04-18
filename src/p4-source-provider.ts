@@ -106,7 +106,21 @@ export async function getSource(settings: IPerforceSourceSettings): Promise<void
     }
 
   } else {
-    throw new Error('Creating a client is not implemented yet')
+    const newClient = await p4.client(settings.clientTemplate)
+    newClient.client = clientName
+    newClient.description = `Build template instance for ${os.hostname()}`
+    newClient.host = os.hostname()
+    newClient.root = settings.repositoryPath
+    newClient.view = []
+    for (const mapping of clientTemplate.view) {
+      newClient.view.push({
+        depot: mapping.depot,
+        client: mapping.client.replace(`//${settings.clientTemplate}/`, `//${clientName}/`)
+      })
+    }
+
+    console.log('Creating new client for build machine')
+    await p4.editClient(newClient)
   }
   core.endGroup()
 
