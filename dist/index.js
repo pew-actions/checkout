@@ -2412,9 +2412,9 @@ function getSource(settings) {
             yield io.mkdirP(settings.repositoryPath);
             core.endGroup();
         }
-        core.startGroup('Restoring checkout directory');
-        yield p4.revert(`//${clientName}/...`);
-        core.endGroup();
+        //core.startGroup('Restoring checkout directory')
+        //await p4.revert(`//${clientName}/...`)
+        //core.endGroup()
         core.startGroup('Checking out the ref');
         yield p4.sync(`//${clientName}/...${settings.ref}`);
         core.endGroup();
