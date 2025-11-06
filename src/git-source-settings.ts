@@ -85,6 +85,11 @@ export interface IGitSourceSettings {
   lfsurl: string
 
   /**
+   * Force LFS checkout
+   */
+  lfsForceCheckout: boolean
+
+  /**
    * Garbage collect the repository first
    */
    gcFirst: boolean
