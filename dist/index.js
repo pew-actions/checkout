@@ -745,6 +745,11 @@ class GitCommandManager {
             yield this.execGit(['lfs', 'install', '--local']);
         });
     }
+    lfsCheckout() {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.execGit(['lfs', 'checkout']);
+        });
+    }
     log1(format) {
         return __awaiter(this, void 0, void 0, function* () {
             const args = format ? ['log', '-1', format] : ['log', '-1'];
@@ -1400,6 +1405,11 @@ function getSource(settings) {
             core.startGroup('Checking out the ref');
             yield git.checkout(checkoutInfo.ref, checkoutInfo.startPoint);
             core.endGroup();
+            if (settings.lfs && settings.lfsForceCheckout) {
+                core.startGroup('LFS force checkout');
+                yield git.lfsCheckout();
+                core.endGroup();
+            }
             // Submodules
             if (settings.submodules) {
                 // Temporarily override global config
@@ -1890,6 +1900,7 @@ function getInputs() {
         // LFS
         result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE';
         result.lfsurl = (core.getInput('lfs-url') || '');
+        result.lfsForceCheckout = (core.getInput('lfs-force-checkout') || 'false').toUpperCase() === 'TRUE';
         result.lfsCredProvider = (core.getInput('lfs-url-cred-provider') || '');
         core.debug(`lfs = ${result.lfs}`);
         //// Default lfs cache server for PEW repositories

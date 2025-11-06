@@ -128,6 +128,10 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # Default: github
     lfs-url-cred-provider: ''
 
+    # Force a git lfs checkout
+    # Default: false
+    lfs-force-checkout: ''
+
     # Whether to checkout submodules: `true` to checkout submodules or `recursive` to
     # recursively checkout submodules.
     #

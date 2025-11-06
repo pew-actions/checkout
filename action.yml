@@ -98,6 +98,9 @@ inputs:
   lfs-url-cred-provider:
     description: 'Credential provider for the Git-LFS server'
     default: 'github'
+  lfs-force-checkout:
+    description: 'Force a git lfs checkout'
+    default: false
   submodules:
     description: >
       Whether to checkout submodules: `true` to checkout submodules or `recursive` to

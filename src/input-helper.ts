@@ -144,6 +144,7 @@ export async function getInputs(): Promise<IGitSourceSettings | IPerforceSourceS
   // LFS
   result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE'
   result.lfsurl = (core.getInput('lfs-url') || '')
+  result.lfsForceCheckout = (core.getInput('lfs-force-checkout') || 'false').toUpperCase() === 'TRUE'
   result.lfsCredProvider = (core.getInput('lfs-url-cred-provider') || '')
   core.debug(`lfs = ${result.lfs}`)
 
