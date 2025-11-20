@@ -138,9 +138,11 @@ export async function getSource(settings: IPerforceSourceSettings): Promise<void
     core.endGroup()
   }
 
-  core.startGroup('Restoring checkout directory')
-  await p4.revert(`//${clientName}/...`)
-  core.endGroup()
+  if (settings.clean) {
+    core.startGroup('Restoring checkout directory')
+    await p4.revert(`//${clientName}/...`)
+    core.endGroup()
+  }
 
   core.startGroup('Checking out the ref')
   await p4.sync(`//${clientName}/...${settings.ref}`)
